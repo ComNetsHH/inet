@@ -54,6 +54,8 @@ void Dcf::initialize(int stage)
         stationRetryCounters = new StationRetryCounters();
         inProgressFrames = new InProgressFrames(pendingQueue, originatorDataService, ackHandler);
         originatorProtectionMechanism = check_and_cast<OriginatorProtectionMechanism*>(getSubmodule("originatorProtectionMechanism"));
+        pendingQueueSizeSignal = registerSignal("pendingQueueSize");
+        pendingQueueDroppedSignal = registerSignal("pendingQueueDropped");
     }
 }
 
@@ -80,12 +82,15 @@ void Dcf::processUpperFrame(Ieee80211DataOrMgmtFrame* frame)
     EV_INFO << "Processing upper frame: " << frame->getName() << endl;
     if (pendingQueue->insert(frame)) {
         EV_INFO << "Frame " << frame->getName() << " has been inserted into the PendingQueue." << endl;
+        emit(pendingQueueSizeSignal, pendingQueue->getLength());
         EV_DETAIL << "Requesting channel" << endl;
         dcfChannelAccess->requestChannel(this);
     }
     else {
         EV_INFO << "Frame " << frame->getName() << " has been dropped because the PendingQueue is full." << endl;
         emit(NF_PACKET_DROP, frame);
+        int i = 1;
+        emit(pendingQueueDroppedSignal, i);
         delete frame;
     }
 }
@@ -152,6 +157,7 @@ void Dcf::transmitFrame(Ieee80211Frame* frame, simtime_t ifs)
     RateSelection::setFrameMode(frame, rateSelection->computeMode(frame));
     frame->setDuration(originatorProtectionMechanism->computeDurationField(frame, inProgressFrames->getPendingFrameFor(frame)));
     tx->transmitFrame(frame, ifs, this);
+    emit(pendingQueueSizeSignal, pendingQueue->getLength());
 }
 
 /*

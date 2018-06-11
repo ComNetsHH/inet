@@ -49,6 +49,10 @@ module Dcf
         @display("i=block/queue");
         @signal[NF_LINK_BREAK](type=Ieee80211DataOrMgmtFrame);
         @signal[NF_PACKET_DROP](type=Ieee80211Frame);
+        @signal[pendingQueueSize](type="long");
+        @statistic[pendingQueueSize](title="pending queue size"; source="pendingQueueSize"; record=count,sum,vector,stats; interpolationmode=linear);
+        @signal[pendingQueueDropped](type="long");
+        @statistic[pendingQueueDropped](title="pending queue dropped"; source="pendingQueueDropped"; record=count,sum,vector,stats; interpolationmode=none);
 
     submodules:
         channelAccess: Dcaf {
